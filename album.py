@@ -10,7 +10,8 @@ from transliterate import translit
 import numpy as np
 from pathlib import Path
 import ctypes
-import eyed3
+#import eyed3
+from mp3_tagger import MP3File
 
 currdir = ""
 if len (sys.argv) > 1:
@@ -51,17 +52,21 @@ class Track:
         self.AudioClip = AudioFileClip(fpath)
 
     def try_get_metadata(self):
-        self.metadata=eyed3.load(self.filepath)     
-        #print(self.metadata.tag.year)  
-        if(self.metadata.tag.title!=""):
-            self.title = self.metadata.tag.title
-        if(self.metadata.tag.album!=""):
-            self.album = self.metadata.tag.album
+        #self.metadata=eyed3.load(self.filepath)   
+        self.metadata=MP3File(self.filepath).get_tags()
+        
+        #print(self.metadata)
+        
+        if(self.metadata['ID3TagV1']['song']!=""):
+            self.title = self.metadata['ID3TagV1']['song']
+        if(self.metadata['ID3TagV1']['album']!=""):
+            self.album = self.metadata['ID3TagV1']['album']
+        if(self.metadata['ID3TagV2']['artist']!=""):
+            self.artist = self.metadata['ID3TagV2']['artist']
         #    print(self.album)
-        if(self.metadata.tag.artist!=""):
-            self.artist = self.metadata.tag.artist
-        if(self.artist==""):
-            self.artist = self.metadata.tag.album_artist
+        # if(self.metadata.tag.artist!=""):  self.artist = self.metadata.ID3TagV2.artist
+        if(self.metadata['ID3TagV2']['year']):
+            self.year = self.metadata['ID3TagV2']['year']
     #    if(self.year==0): self.year = self.metadata.tag.getYear() 
 
     def parse(self, fpath):
@@ -117,15 +122,18 @@ class Album:
             self.artist = track.artist
         if(self.title==""):
             self.title = track.album
-        #if(self.year==0): self.year = track.metadata.tag.year;
+        if(self.year==0): self.year = track.year;
 
     def print_tracklist(self):
         num = 1
         print(self.getFullTitle())
-        print("Треклист: ")
+        resstr = "Треклист: \n"        
         for track in self.tracks:
-            print('{} - {}. {}'.format(track.gettime(),num,track.title))
+            resstr+='{} - {}. {}\n'.format(track.gettime(),num,track.title)
             num += 1
+        with open(self.path+"tracklist.txt", "w") as file:
+            file.write(resstr)
+        print(resstr)
 
     def getFullTitle(self):
         if((self.title=="") & (self.artist=="")): 
@@ -140,4 +148,4 @@ class Album:
 
 album = Album(currdir)
 album.print_tracklist()
-#album.render_video()
+album.render_video()
